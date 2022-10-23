@@ -1,0 +1,34 @@
+build:
+  gpu: true
+  cuda: "11.6.0"
+  system_packages:
+    - "ffmpeg"
+    - "git"
+    - "cmake"
+    - "build-essential"
+    - "libboost-program-options-dev" 
+    - "libboost-filesystem-dev"
+    - "libboost-graph-dev" 
+    - "libboost-system-dev" 
+    - "libboost-test-dev" 
+    - "libeigen3-dev" 
+    - "libsuitesparse-dev" 
+    - "libfreeimage-dev" 
+    - "libmetis-dev" 
+    - "libgoogle-glog-dev" 
+    - "libgflags-dev" 
+    - "libglew-dev" 
+    - "qtbase5-dev" 
+    - "libqt5opengl5-dev" 
+    - "libcgal-dev"
+    - "libatlas-base-dev" 
+    - "libsuitesparse-dev"
+  run:
+    - git clone https://ceres-solver.googlesource.com/ceres-solver --branch 2.1.0 && cd ceres-solver && mkdir build && cd build && cmake .. -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF && make -j4 && make install && cd ../../
+    - git clone https://github.com/colmap/colmap.git --branch 3.7 && cd colmap && mkdir build && cd build && cmake .. && make -j4 && make install && cd ../../
+  python_version: "3.7"
+  python_packages: 
+    - "numpy==1.21.0"
+    - "typing_extensions==4.4.0"
+predict: "predict.py:Predictor"
+image: "r8.im/jimothyjohn/colmap"

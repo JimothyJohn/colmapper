@@ -4,11 +4,15 @@
 
 import subprocess
 import sys
+import pathlib
 from enum import Enum
 from typing import List, Optional
+import tarfile
+import os.path
 
 from typing_extensions import Literal
 from cog import BasePredictor, Input, Path
+
 
 class Predictor(BasePredictor):
     def setup(self):
@@ -21,9 +25,37 @@ class Predictor(BasePredictor):
         video: Path = Input(description="Short sample video"),
     ) -> Path:
         """Run a single prediction on the model"""
-        # processed_input = preprocess(image)
+        # processed_input = preprocess(video)
         # output = self.model(processed_image, scale)
         # return postprocess(output)
+
+        # Identify number of target frames
+        num_frames_target = 150
+        num_frames = get_num_frames_in_video(video)
+        if num_frames < 150:
+            num_frames_target = num_frames
+
+        colmap_dir = pathlib.Path("cog-workspace")
+        image_dir = pathlib.Path("cog-workspace/images")
+        image_dir.mkdir(parents=True, exist_ok=True)
+
+        print(f"Slicing video")
+        convert_video_to_images(
+            video_path=video,
+            image_dir=image_dir,
+            num_frames_target=num_frames_target,
+        )
+        run_colmap(image_dir=image_dir, colmap_dir=colmap_dir, verbose=True)
+
+        print(f"Archiving colmapping")
+        make_tarfile("colmap.tar.gz", "cog-workspace")
+        return Path("colmap.tar.gz")
+
+
+def make_tarfile(output_filename, source_dir):
+    with tarfile.open(output_filename, "w:gz") as tar:
+        tar.add(source_dir, arcname=os.path.basename(source_dir))
+        tar.close()
 
 
 class CameraModel(Enum):
@@ -100,7 +132,7 @@ def convert_video_to_images(
     """
 
     # delete existing images in folder
-    for img in image_dir.glob("*.png"):
+    for img in image_dir.glob("*.jpg"):
         img.unlink()
 
     num_frames = get_num_frames_in_video(video_path)
@@ -109,20 +141,21 @@ def convert_video_to_images(
 
     print("Number of frames in video:", num_frames)
 
-    out_filename = image_dir / "frame_%05d.png"
+    out_filename = image_dir / "frame_%05d.jpg"
     ffmpeg_cmd = f"ffmpeg -i {video_path}"
     spacing = num_frames // num_frames_target
 
     if spacing > 1:
         ffmpeg_cmd += f" -vf 'thumbnail={spacing},setpts=N/TB' -r 1"
 
-    ffmpeg_cmd += f" {out_filename}"
+    # Reduce resolution to increase processing speed
+    ffmpeg_cmd += f" -s 640x480 {out_filename}"
 
     run_command(ffmpeg_cmd, verbose=verbose)
 
     summary_log = []
     summary_log.append(f"Starting with {num_frames} video frames")
-    summary_log.append(f"We extracted {len(list(image_dir.glob('*.png')))} images")
+    summary_log.append(f"We extracted {len(list(image_dir.glob('*.jpg')))} images")
 
     return summary_log
 
@@ -130,7 +163,6 @@ def convert_video_to_images(
 def run_colmap(
     image_dir: Path,
     colmap_dir: Path,
-    camera_model: CameraModel,
     verbose: bool = False,
     matching_method: Literal["vocab_tree", "exhaustive", "sequential"] = "sequential",
 ) -> None:
@@ -139,14 +171,9 @@ def run_colmap(
     Args:
         image_dir: Path to the directory containing the images.
         colmap_dir: Path to the output directory.
-        camera_model: Camera model to use.
-        gpu: If True, use GPU.
         verbose: If True, logs the output of the command.
+        matching_method: "sequential",
     """
-
-    colmap_version = get_colmap_version()
-
-    (colmap_dir / "database.db").unlink(missing_ok=True)
 
     # Feature extraction
     feature_extractor_cmd = [
@@ -154,10 +181,11 @@ def run_colmap(
         f"--database_path {colmap_dir / 'database.db'}",
         f"--image_path {image_dir}",
         "--ImageReader.single_camera 1",
-        f"--ImageReader.camera_model {camera_model.value}",
+        "--ImageReader.camera_model OPENCV",
     ]
     feature_extractor_cmd = " ".join(feature_extractor_cmd)
-    run_command(feature_extractor_cmd, verbose=verbose)
+    print(f"Extracting features...")
+    run_command(feature_extractor_cmd, verbose=False)
 
     # Feature matching
     feature_matcher_cmd = [
@@ -165,9 +193,10 @@ def run_colmap(
         f"--database_path {colmap_dir / 'database.db'}",
     ]
     feature_matcher_cmd = " ".join(feature_matcher_cmd)
-    run_command(feature_matcher_cmd, verbose=verbose)
+    print(f"Matching features...")
+    run_command(feature_matcher_cmd, verbose=False)
 
-    # Bundle adjustment
+    # Feature mapping
     sparse_dir = colmap_dir / "sparse"
     sparse_dir.mkdir(parents=True, exist_ok=True)
     mapper_cmd = [
@@ -176,16 +205,25 @@ def run_colmap(
         f"--image_path {image_dir}",
         f"--output_path {sparse_dir}",
     ]
+
+    """
+    colmap_version = get_colmap_version()
     if colmap_version >= 3.7:
         mapper_cmd.append("--Mapper.ba_global_function_tolerance 1e-6")
+    """
 
     mapper_cmd = " ".join(mapper_cmd)
-
+    print(f"Mapping features")
     run_command(mapper_cmd, verbose=verbose)
+
+    # Feature mapping
+    bundle_dir = sparse_dir / "0"
+    bundle_dir.mkdir(parents=True, exist_ok=True)
     bundle_adjuster_cmd = [
         "colmap bundle_adjuster",
-        f"--input_path {sparse_dir}/0",
-        f"--output_path {sparse_dir}/0",
-        "--BundleAdjustment.refine_principal_point 1",
+        f"--input_path {bundle_dir}",
+        f"--output_path {bundle_dir}",
+        # "--BundleAdjustment.refine_principal_point 1",
     ]
+    print(f"Adjusting bundles")
     run_command(" ".join(bundle_adjuster_cmd), verbose=verbose)

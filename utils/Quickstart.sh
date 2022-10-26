@@ -17,7 +17,7 @@ then
 fi
 
 # Grab user inputs
-WORKSPACE="workspace"
+VIDEO="https://whatagan.s3.amazonaws.com/LionStatue.MOV"
 PARAMS=""
 POSITIONAL=()
 while [[ $# -gt 0 ]]; do
@@ -25,15 +25,11 @@ while [[ $# -gt 0 ]]; do
     case $key in
         # Flags
         -h|--help)
-            echo "Optional args: -i or --input, -w or --workspace"
+            echo "Optional args: -v or --video"
             exit 1
             ;;
-        -i|--input)
+        -v|--video)
             VIDEO="$2"
-            shift 2
-            ;;
-        -w|--workspace)
-            WORKSPACE="$2"
             shift 2
             ;;
         -*|--*=) # unsupported flags
@@ -46,33 +42,4 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Clear previous workspace
-rm -r $WORKSPACE/*
-mkdir -p $WORKSPACE/images
-
-if [[ $VIDEO == "" ]]
-then
-    echo "Slicing lion sample"
-    sudo cog run wget https://whatagan.s3.amazonaws.com/LionStatue.MOV && \
-        ffmpeg -i LionStatue.MOV -r 3 -s 640x480 $WORKSPACE/images/%04d.jpg
-fi
-
-# Build reconstruction
-sudo cog run colmap feature_extractor \
-    --database_path $WORKSPACE/database.db \
-    --image_path $WORKSPACE/images \
-    --ImageReader.camera_model OPENCV \
-    --ImageReader.single_camera 1
-
-sudo cog run colmap sequential_matcher \
-    --database_path $WORKSPACE/database.db \
-
-mkdir -p $WORKSPACE/sparse/0
-sudo cog run colmap mapper \
-    --database_path $WORKSPACE/database.db \
-    --image_path $WORKSPACE/images \
-    --output_path $WORKSPACE/sparse
-
-sudo cog run colmap bundle_adjuster \
-    --input_path $WORKSPACE/sparse/0 \
-    --output_path $WORKSPACE/sparse/0
+sudo cog predict -i $VIDEO

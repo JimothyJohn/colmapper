@@ -162,3 +162,4 @@ cython_debug/
 # My stuff
 *.tar*
 *.mov
+*.DS_Store

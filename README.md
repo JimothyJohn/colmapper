@@ -14,17 +14,21 @@ utils/Quickstart.sh
 
 ## Requirements
 
-* CUDA>=11.6
+* CUDA>=11.6.2
 * [Docker](https://www.docker.com)
 * [Cog](https://github.com/replicate/cog#install)
 
 ## To-do
 
-* Build tests
-* Genericize approach
+- [x] Create Replicate endpoint
+- [x] Plug-and-play with nerfstudio
+- [ ] Build tests
+- [ ] Decrease run time (currently ~30 minutes). COLMAP options, downsample earlier?
+- [ ] Optimize .zip file size (currently ~1GB). Remove extra images?
+- [ ] Add Image and Insta360 input options
 
 ### Acknowledgements
 
 - [COLMAP](https://github.com/colmap/colmap) for their amazing toolset that is used in EVERY NeRF deployment.
 - [nerfstudio](https://github.com/nerfstudio-project/nerfstudio/blob/main/scripts) for their Python scripts.
-- [svox2](https://github.com/sxyu/svox2) for their neural network-free radiance field utilities.
+- [svox2](https://github.com/sxyu/svox2/opt) for their neural network-free radiance field utilities.

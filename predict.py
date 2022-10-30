@@ -3,22 +3,16 @@
 
 import os
 import sys
-import tarfile
+from shutil import make_archive
 import shutil
 import random
-from turtle import down
+import yt_dlp
 
 from cog import BasePredictor, Input, Path
 
 from colmapper.nerfstudio.process_data import *
 from colmapper.svox2.colmap2nsvf import read_colmap_sparse
 from colmapper.svox2.create_split import list_filter_dirs
-
-
-def make_tarfile(output_filename, source_dir):
-    with tarfile.open(output_filename, "w") as tar:
-        tar.add(source_dir, arcname=os.path.basename(source_dir))
-        tar.close()
 
 
 def get_nvsf(
@@ -170,58 +164,77 @@ def get_split(root_dir: Path, every: int = 16, randomize: bool = False):
             os.rename(full_filename, new_full_filename)
 
 
-quality_num = {"Low": 2, "Med": 1}
+quality_num = {"Low": 2, "Med": 1, "High": 0}
 
 
 class Predictor(BasePredictor):
     def predict(
         self,
         video: Path = Input(description="Short sample video"),
+        name: str = Input(description="Name of experiment", default="colmap-out"),
         format: str = Input(
             description="Colmap output format ex: instant-ngp, nerfacto, arf",
             choices=["instant-ngp", "nerfacto", "arf"],
-            default="instant-ngp",
+            default="nerfacto",
         ),
         quality: str = Input(
             description="Resolution of images",
             choices=["Low", "Med", "High"],
             default="Low",
         ),
+        media: str = Input(
+            description="Media type",
+            choices=["images", "video", "insta360"],
+            default="video",
+        ),
+        continuous: bool = Input(
+            description="Is this a continuous video?", default=True
+        ),
     ) -> Path:
-        print(f"Formatting for {format}")
-        """Create COLMAP archive from video"""
-        colmap_dir = Path("cog-workspace")
-        image_dir = colmap_dir / "images"
-        image_dir.mkdir(parents=True, exist_ok=True)
+        """Create COLMAP zipfile from video"""
+        filename = f"{name}"
+        colmap_dir = Path(filename)
+       
+        if video.name.startswith("watch?v="):
+            print("UNDER CONSTRUCTION")
+            exit()
+            URLS = [f'https://www.youtube.com/{video.name}']
 
-        convert_video_to_images(
-            video_path=video,
-            image_dir=image_dir,
-            num_frames_target=150,
+            ydl_opts = {
+                'format': 'mp4/best',
+                'outtmpl': f"{filename}.mp4", 
+                # ℹ️ See help(yt_dlp.postprocessor) for a list of available Postprocessors and their arguments
+            }
+
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                error_code = ydl.download(URLS)
+
+            video = Path(f"{filename}.mp4") 
+
+        # Start with catch-all matching but offer the faster, sequential option
+        matching_method = "sequential"
+        if not continuous:
+            matching_method = "vocab_tree"
+
+        # TODO Move into if-statement below
+        num_frames_target = 300 / (quality_num[quality] + 1)
+        colmapper = ProcessVideo(
+            data=video,
+            output_dir=colmap_dir,
+            num_frames_target=num_frames_target,
+            matching_method=matching_method,
+            num_downscales=quality_num[quality],
+            verbose=True,
         )
+        # TODO Add other classes in a better form of a switch-case
+        if media == "Images":
+            print("UNDER CONSTRUCTION")
+            exit()
+        elif media == "Insta360":
+            print("UNDER CONSTRUCTION")
+            exit()
 
-        if quality != "High":
-            downscale_images(image_dir=image_dir, num_downscales=quality_num[quality])
+        colmapper.main()
 
-        run_colmap(
-            image_dir=image_dir,
-            colmap_dir=colmap_dir,
-            camera_model=CameraModel.OPENCV,
-            matching_method="sequential",
-        )
-
-        if format == "arf":
-            sparse_dir = colmap_dir / "sparse" / "0"
-            get_nvsf(sparse_dir, overwrite=True)
-            get_split(colmap_dir, randomize=True)
-        else:
-            if (colmap_dir / "sparse" / "0" / "cameras.bin").exists():
-                colmap_to_json(
-                    cameras_path=colmap_dir / "sparse" / "0" / "cameras.bin",
-                    images_path=colmap_dir / "sparse" / "0" / "images.bin",
-                    output_dir=colmap_dir,
-                    camera_model=CameraModel.OPENCV,
-                )
-
-        make_tarfile("colmap.tar", "cog-workspace")
-        return Path("colmap.tar")
+        make_archive(filename, "zip", filename)
+        return Path(f"{filename}.zip")

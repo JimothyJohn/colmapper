@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# https://github.com/nerfstudio-project/nerfstudio/blob/main/scripts/process_data.py
 """Processes a video or image sequence to a nerfstudio compatible dataset."""
 
 import json
@@ -9,10 +8,9 @@ import sys
 from contextlib import nullcontext
 from dataclasses import dataclass
 from enum import Enum
-
-# Fix cog compatibility issue
-# from pathlib import Path
 from cog import Path
+
+# from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
 import appdirs
@@ -247,8 +245,8 @@ def convert_insta360_to_images(
         front_vf_cmds = vf_cmds + ["transpose=2"]
         back_vf_cmds = vf_cmds + ["transpose=1"]
 
-        front_ffmpeg_cmd = f"ffmpeg -i {video_front} -vf '{','.join(front_vf_cmds)}' -r 1 {image_dir / 'frame_%05d.png'}"
-        back_ffmpeg_cmd = f"ffmpeg -i {video_back} -vf '{','.join(back_vf_cmds)}' -r 1 {image_dir / 'back_frame_%05d.png'}"
+        front_ffmpeg_cmd = f"ffmpeg -i {video_front} -vf {','.join(front_vf_cmds)} -r 1 {image_dir / 'frame_%05d.png'}"
+        back_ffmpeg_cmd = f"ffmpeg -i {video_back} -vf {','.join(back_vf_cmds)} -r 1 {image_dir / 'back_frame_%05d.png'}"
 
         run_command(front_ffmpeg_cmd, verbose=verbose)
         run_command(back_ffmpeg_cmd, verbose=verbose)
@@ -308,7 +306,6 @@ def copy_images(data: Path, image_dir: Path, verbose) -> int:
     return num_frames
 
 
-# Remove unnecessary additional downsamples
 def downscale_images(
     image_dir: Path, num_downscales: int, verbose: bool = False
 ) -> str:
@@ -333,24 +330,21 @@ def downscale_images(
         spinner="growVertical",
         verbose=verbose,
     ):
-        # Remove unnecessary additional downsamples
-        # downscale_factors = [2**i for i in range(num_downscales + 1)[1:]]
-        downscale_factor = 2**num_downscales
-        assert downscale_factor > 1
-        assert isinstance(downscale_factor, int)
-        downscale_dir = image_dir.parent / f"images_{downscale_factor}"
-        downscale_dir.mkdir(parents=True, exist_ok=True)
-        file_type = image_dir.glob("frame_*").__next__().suffix
-        filename = f"frame_%05d{file_type}"
-        ffmpeg_cmd = [
-            f"ffmpeg -i {image_dir / filename} ",
-            f"-q:v 2 -vf scale=iw/{downscale_factor}:ih/{downscale_factor} ",
-            f"{downscale_dir / filename}",
-        ]
-        ffmpeg_cmd = " ".join(ffmpeg_cmd)
-        run_command(ffmpeg_cmd, verbose=verbose)
-        shutil.rmtree(image_dir)
-        downscale_dir.rename(image_dir)
+        downscale_factors = [2**i for i in range(num_downscales + 1)[1:]]
+        for downscale_factor in downscale_factors:
+            assert downscale_factor > 1
+            assert isinstance(downscale_factor, int)
+            downscale_dir = image_dir.parent / f"images_{downscale_factor}"
+            downscale_dir.mkdir(parents=True, exist_ok=True)
+            file_type = image_dir.glob("frame_*").__next__().suffix
+            filename = f"frame_%05d{file_type}"
+            ffmpeg_cmd = [
+                f"ffmpeg -i {image_dir / filename} ",
+                f"-q:v 2 -vf scale=iw/{downscale_factor}:ih/{downscale_factor} ",
+                f"{downscale_dir / filename}",
+            ]
+            ffmpeg_cmd = " ".join(ffmpeg_cmd)
+            run_command(ffmpeg_cmd, verbose=verbose)
 
     CONSOLE.log("[bold green]:tada: Done downscaling images.")
     downscale_text = [

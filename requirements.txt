@@ -1,6 +1,4 @@
 --extra-index-url https://download.pytorch.org/whl/cu126
-# https://github.com/pytorch/pytorch/issues/91516#issue-1514017463
-# numpy<1.24
 # Prevents open3d bug: AttributeError: partially initialized module 'pandas' has no attribute '_pandas_datetime_CAPI' (most likely due to a circular import)
 numpy==1.24.4
 pandas==2.0.3
@@ -31,4 +29,5 @@ einops==0.6.0
 timm==0.6.12
 matplotlib
 pytest
-
+setuptools
+wheel

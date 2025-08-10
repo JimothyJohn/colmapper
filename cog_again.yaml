@@ -1,0 +1,36 @@
+build:
+  gpu: true
+  cuda: "12.6.1"
+  system_packages:
+    - "git"
+    - "zip"
+    - "ninja-build"
+    - "ffmpeg"
+    - "cmake"
+    - "build-essential"
+    - "libboost-program-options-dev" 
+    - "libboost-graph-dev" 
+    - "libboost-system-dev" 
+    - "libeigen3-dev" 
+    - "libflann-dev"
+    - "libfreeimage-dev" 
+    - "libgoogle-glog-dev"
+    - "libgtest-dev"
+    - "libgmock-dev"
+    - "libmetis-dev" 
+    - "libsqlite3-dev"
+    - "libglew-dev" 
+    - "qtbase5-dev" 
+    - "libqt5opengl5-dev" 
+    - "libcgal-dev"
+    - "libceres-dev"
+    - "libcurl4-openssl-dev"
+    - "libgl1"
+    - "libglm-dev"
+  run:
+    - git clone https://github.com/colmap/colmap.git /colmap && cd /colmap && git fetch https://github.com/colmap/colmap.git main && git checkout 3.11.1 && mkdir build && cd build && cmake .. -GNinja -DCMAKE_CUDA_ARCHITECTURES=native && ninja install
+    - python -m pip install --upgrade setuptools wheel && git clone --recursive https://github.com/NVlabs/queen /queen && cd /queen && python -m pip install -r /tmp/requirements.txt && TORCH_CUDA_ARCH_LIST="6.0;6.1;7.0;7.5;8.0;8.6+PTX" python -m pip install --no-build-isolation --use-pep517 -e submodules/diff-gaussian-rasterization && TORCH_CUDA_ARCH_LIST="6.0;6.1;7.0;7.5;8.0;8.6+PTX" python -m pip install --no-build-isolation --use-pep517 -e submodules/gaussian-rasterization-grad && sed -i '/#include <cooperative_groups\/reduce.h>/a \#include <cfloat>' /queen/submodules/simple-knn/simple_knn.cu && TORCH_CUDA_ARCH_LIST="6.0;6.1;7.0;7.5;8.0;8.6+PTX" python -m pip install --no-build-isolation --use-pep517 -e /queen/submodules/simple-knn && mv /queen/maxxvit.py /usr/local/lib/python3.11/dist-packages/timm/models/maxxvit.py
+  python_version: "3.11"
+  python_requirements: requirements.txt
+predict: "predict.py:Predictor"
+image: "r8.im/jimothyjohn/colmap"

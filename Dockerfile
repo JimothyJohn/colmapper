@@ -73,10 +73,8 @@ RUN git clone https://github.com/colmap/colmap.git /colmap && \
     cmake .. -GNinja -DCMAKE_CUDA_ARCHITECTURES=${CUDA_ARCHITECTURES} && \
     ninja install
 
-ENV BUILD_TOGGLE=true
-
 # https://github.com/JimothyJohn/4DGaussians?tab=readme-ov-file#environmental-setups
-COPY requirements-cuda.txt /tmp/requirements.txt
+COPY requirements.txt /tmp/requirements.txt
 RUN python -m pip install --upgrade setuptools wheel && \
     git clone --recursive https://github.com/NVlabs/queen /queen && \
     cd /queen && \
@@ -86,4 +84,5 @@ RUN python -m pip install --upgrade setuptools wheel && \
     # Fix error: "submodules/simple-knn/simple_knn.cu(154): error: identifier "FLT_MAX" is undefined"
     sed -i '/#include <cooperative_groups\/reduce.h>/a #include <cfloat>' /queen/submodules/simple-knn/simple_knn.cu && \
     python -m pip install --no-build-isolation --use-pep517 -e /queen/submodules/simple-knn && \
-    mv /queen/maxxvit.py /usr/local/lib/python3.11/dist-packages/timm/models/maxxvit.py
+    mv /queen/maxxvit.py /usr/local/lib/python3.11/dist-packages/timm/models/maxxvit.py && \
+    sed -i "s/os.path.join(datadir,'cam00','images','0000.png')/os.path.join(datadir,'cam01','images','0000.png')/g" /queen/scene/dataset_readers.py

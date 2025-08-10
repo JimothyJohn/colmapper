@@ -3,9 +3,9 @@ from pathlib import Path
 import numpy as np
 import glob
 import shutil
-from utils import rotmat2qvec
+from dev.utils import rotmat2qvec
 import subprocess
-from database import COLMAPDatabase, blob_to_array
+from dev.database import COLMAPDatabase, blob_to_array
 
 # https://github.com/hustvl/4DGaussians/blob/master/scripts/llff2colmap.py
 def llff2colmap(workdir: str) -> None:

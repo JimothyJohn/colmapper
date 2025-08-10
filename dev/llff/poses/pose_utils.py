@@ -4,14 +4,14 @@ import sys
 import imageio
 import skimage.transform
 
-from llff.poses.colmap_wrapper import run_colmap
-import llff.poses.colmap_read_model as read_model
+from dev.llff.poses.colmap_wrapper import run_colmap
+import dev.llff.poses.colmap_read_model as colmap_read_model
 
 
 def load_colmap_data(realdir):
 
     camerasfile = os.path.join(realdir, "sparse/0/cameras.bin")
-    camdata = read_model.read_cameras_binary(camerasfile)
+    camdata = colmap_read_model.read_cameras_binary(camerasfile)
 
     # cam = camdata[camdata.keys()[0]]
     list_of_keys = list(camdata.keys())
@@ -23,7 +23,7 @@ def load_colmap_data(realdir):
     hwf = np.array([h, w, f]).reshape([3, 1])
 
     imagesfile = os.path.join(realdir, "sparse/0/images.bin")
-    imdata = read_model.read_images_binary(imagesfile)
+    imdata = colmap_read_model.read_images_binary(imagesfile)
 
     w2c_mats = []
     bottom = np.array([0, 0, 0, 1.0]).reshape([1, 4])
@@ -47,7 +47,7 @@ def load_colmap_data(realdir):
     )
 
     points3dfile = os.path.join(realdir, "sparse/0/points3D.bin")
-    pts3d = read_model.read_points3d_binary(points3dfile)
+    pts3d = colmap_read_model.read_points3d_binary(points3dfile)
 
     # must switch to [-u, r, -t] from [r, -u, t], NOT [r, u, -t]
     poses = np.concatenate(

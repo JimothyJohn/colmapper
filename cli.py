@@ -1,8 +1,8 @@
 import argparse
 import os
-from dev.utils import prepare_workdir, process_ply_file
-from dev.video_processing import extract_frames
-from dev.colmap import *
+from colmapper.utils import prepare_workdir, process_ply_file
+from colmapper.video_processing import extract_frames
+from colmapper.colmap import run_colmap_script
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--workdir", type=str, required=True)

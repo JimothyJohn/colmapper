@@ -1,16 +1,15 @@
 import numpy as np
 import os
-import sys
 import imageio
 import skimage.transform
 
-from dev.llff.poses.colmap_wrapper import run_colmap
-import dev.llff.poses.colmap_read_model as colmap_read_model
+from colmapper.llff.poses.colmap_wrapper import run_colmap
+import colmapper.llff.poses.colmap_read_model as colmap_read_model
 
 
 def load_colmap_data(realdir):
 
-    camerasfile = os.path.join(realdir, "sparse/0/cameras.bin")
+    camerasfile = os.path.join(realdir, "sparse_/0/cameras.bin")
     camdata = colmap_read_model.read_cameras_binary(camerasfile)
 
     # cam = camdata[camdata.keys()[0]]
@@ -22,7 +21,7 @@ def load_colmap_data(realdir):
     # w, h, f = factor * w, factor * h, factor * f
     hwf = np.array([h, w, f]).reshape([3, 1])
 
-    imagesfile = os.path.join(realdir, "sparse/0/images.bin")
+    imagesfile = os.path.join(realdir, "sparse_/0/images.bin")
     imdata = colmap_read_model.read_images_binary(imagesfile)
 
     w2c_mats = []
@@ -46,7 +45,7 @@ def load_colmap_data(realdir):
         [poses, np.tile(hwf[..., np.newaxis], [1, 1, poses.shape[-1]])], 1
     )
 
-    points3dfile = os.path.join(realdir, "sparse/0/points3D.bin")
+    points3dfile = os.path.join(realdir, "sparse_/0/points3D.bin")
     pts3d = colmap_read_model.read_points3d_binary(points3dfile)
 
     # must switch to [-u, r, -t] from [r, -u, t], NOT [r, u, -t]
@@ -303,8 +302,8 @@ def load_data(basedir, factor=None, width=None, height=None, load_imgs=True):
 def gen_poses(basedir, match_type, factors=None):
 
     files_needed = ["{}.bin".format(f) for f in ["cameras", "images", "points3D"]]
-    if os.path.exists(os.path.join(basedir, "sparse/0")):
-        files_had = os.listdir(os.path.join(basedir, "sparse/0"))
+    if os.path.exists(os.path.join(basedir, "sparse_/0")):
+        files_had = os.listdir(os.path.join(basedir, "sparse_/0"))
     else:
         files_had = []
     if not all([f in files_had for f in files_needed]):

@@ -162,5 +162,9 @@ cython_debug/
 # My stuff
 *.tar*
 *.mov
+*.mp4
+*.png
 *.DS_Store
 data/*
+.cog/*
+models/

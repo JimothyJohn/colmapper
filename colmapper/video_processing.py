@@ -1,7 +1,7 @@
-import argparse
 import glob
 import os
 import subprocess
+import shutil
 import concurrent.futures
 import multiprocessing
 from tqdm import tqdm
@@ -77,8 +77,8 @@ def process_single_video(video_info, progress_bar):
         video_path,
         "-loglevel",
         "error",
-        "-vf",
-        "scale=1352:1014",  # Scale to exactly half the original resolution
+        # "-vf",
+        # "scale=1352:1014",  # Scale to exactly half the original resolution
         "-qscale:v",
         "2",
         "-start_number",
@@ -133,6 +133,36 @@ def process_single_video(video_info, progress_bar):
             "Error: ffmpeg command not found. Please ensure ffmpeg is installed and in your PATH."
         )
         return False
+
+
+# https://github.com/hustvl/4DGaussians/blob/843d5ac636c37e4b611242287754f3d4ed150144/scripts/llff2colmap.py#L101
+def extract_first_frames(data_dir):
+    """
+    Extracts the first frame of each video in the given directory.
+    """
+    image_paths = []
+    videos = glob.glob(os.path.join(data_dir, "cam[0-9][0-9]"))
+    videos = sorted(videos)
+    for index, video_path in enumerate(videos):
+        image_path = os.path.join(video_path, "images", "0000.png")
+        image_paths.append(image_path)
+    goal_dir = os.path.join(data_dir, "image_colmap")
+
+    image_name_list = []
+    for index, image in enumerate(image_paths):
+        image_name = image.split("/")[-1].split(".")
+        image_name[0] = "r_%03d" % index
+        # breakpoint()
+        image_name = ".".join(image_name)
+        image_name_list.append(image_name)
+        goal_path = os.path.join(goal_dir, image_name)
+        shutil.copy(image, goal_path)
+
+    # Moves all .mp4 videos in data_dir into a new directory called "videos"
+    videos_dir = os.path.join(data_dir, "videos")
+    os.makedirs(videos_dir, exist_ok=True)
+    for video in glob.glob(os.path.join(data_dir, "*.mp4")):
+        shutil.move(video, os.path.join(videos_dir, os.path.basename(video)))
 
 
 def extract_frames(data_dir):
@@ -192,3 +222,6 @@ def extract_frames(data_dir):
 
     # Close the progress bar
     progress_bar.close()
+
+    extract_first_frames(data_dir)
+

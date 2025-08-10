@@ -1,0 +1,34 @@
+--extra-index-url https://download.pytorch.org/whl/cu126
+# https://github.com/pytorch/pytorch/issues/91516#issue-1514017463
+# numpy<1.24
+# Prevents open3d bug: AttributeError: partially initialized module 'pandas' has no attribute '_pandas_datetime_CAPI' (most likely due to a circular import)
+numpy==1.24.4
+pandas==2.0.3
+# Use numpy v1-compatible version
+mmcv<2.0
+matplotlib
+argparse
+lpips
+plyfile
+pytorch_msssim
+# TODO probably pin this one...
+open3d
+imageio[ffmpeg]
+tqdm
+# tensorboard
+# wandb
+cog
+scikit-image
+# queen reqs
+torch==2.5.0
+torchvision==0.20.0
+opencv-python
+scipy
+six
+torchmetrics
+imutils
+einops==0.6.0
+timm==0.6.12
+matplotlib
+pytest
+

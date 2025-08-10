@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+
+# Default values
+BUILD_IMAGE=false
+ACTION=""
+CONFIG_PATH=""
+SCENE_PATH=""
+MODEL_PATH=""
+
+# Help function
+usage() {
+    echo "Usage: $0 [options]"
+    echo "Options:"
+    echo "  -b          Build the Docker image (disabled by default)."
+    echo "  -t          Set action to 'train'."
+    echo "  -r          Set action to 'render'."
+    echo "  -c <path>   Path to config file (for training)."
+    echo "  -s <path>   Path to scene data."
+    echo "  -m <path>   Path to model (input for render, output for train)."
+    echo ""
+    echo "Examples:"
+    echo "  Build only:"
+    echo "    $0 -b"
+    echo "  Train a model:"
+    echo "    $0 -t -c configs/dynerf.yaml -s data/dynerf/coffee_martini -m ./output/coffee_martini_trained"
+    echo "  Build and train:"
+    echo "    $0 -b -t -c configs/dynerf.yaml -s data/dynerf/coffee_martini -m ./output/coffee_martini_trained"
+    echo "  Render a scene:"
+    echo "    $0 -r -s data/dynerf/coffee_martini -m ./output/coffee_martini_trained"
+    echo "  Run an interactive shell:"
+    echo "    $0"
+    exit 1
+}
+
+# Parse options
+while getopts "btrc:s:m:" opt; do
+    case "$opt" in
+        b) BUILD_IMAGE=true ;;
+        t) 
+            if [ -n "$ACTION" ]; then echo "Error: -t and -r are mutually exclusive."; usage; fi
+            ACTION="train"
+            ;;
+        r)
+            if [ -n "$ACTION" ]; then echo "Error: -t and -r are mutually exclusive."; usage; fi
+            ACTION="render"
+            ;;
+        c) CONFIG_PATH="$OPTARG" ;;
+        s) SCENE_PATH="$OPTARG" ;;
+        m) MODEL_PATH="$OPTARG" ;;
+        \?) usage ;;
+        *) usage ;;
+    esac
+done
+
+# If no action is specified, default to interactive shell.
+if [ -z "$ACTION" ]; then
+    # If build flag is not set, we can just launch the shell.
+    # Otherwise, build will be handled before launching the shell.
+    if [ "$BUILD_IMAGE" = false ] && [ $OPTIND -eq 1 ]; then
+        ACTION="interactive"
+    # If there are other opts but no action, show usage
+    elif [ "$BUILD_IMAGE" = false ] && [ $OPTIND -gt 1 ]; then
+        usage
+    # If build is true, action will be handled after build
+    elif [ "$BUILD_IMAGE" = true ]; then
+        ACTION="interactive"
+    fi
+fi
+
+IMAGE="queen:latest"
+DOCKER_RUN_BASE="sudo docker run --rm -it -v $(pwd):/app -v $HOME/dev/github/queen/data:/data -w /app --gpus all --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 $IMAGE"
+
+# Build image if requested
+if [ "$BUILD_IMAGE" = true ]; then
+    echo "Building Docker image..."
+    if ! sudo docker build -t $IMAGE -f Dockerfile.colmap . ; then
+        echo "Docker build failed. Aborting."
+        exit 1
+    fi
+fi
+
+# Execute action
+case "$ACTION" in
+    train)
+        if [ -z "$CONFIG_PATH" ] || [ -z "$SCENE_PATH" ] || [ -z "$MODEL_PATH" ]; then
+            echo "Error: Training requires -c, -s, and -m arguments."
+            usage
+        fi
+        echo "Running training..."
+        CMD="python train.py --config $CONFIG_PATH -s $SCENE_PATH -m $MODEL_PATH --log_ply --log_images --log_compressed"
+        $DOCKER_RUN_BASE $CMD
+        ;;
+    render)
+        if [ -z "$SCENE_PATH" ] || [ -z "$MODEL_PATH" ]; then
+            echo "Error: Rendering requires -s and -m arguments."
+            usage
+        fi
+        echo "Running rendering..."
+        CMD="python render_fvv.py -s $SCENE_PATH -m $MODEL_PATH"
+        $DOCKER_RUN_BASE $CMD
+        ;;
+    interactive)
+        echo "Launching interactive shell..."
+        $DOCKER_RUN_BASE /bin/bash
+        ;;
+    "")
+        # This case is for when only -b is provided.
+        if [ "$BUILD_IMAGE" = true ]; then
+            echo "Docker image built successfully."
+        fi
+        ;;
+    *)
+        echo "Invalid action."
+        usage
+        ;;
+esac
+

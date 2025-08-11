@@ -67,8 +67,8 @@ if [ -z "$ACTION" ]; then
     fi
 fi
 
-IMAGE="queen:latest"
-DOCKER_RUN_BASE="sudo docker run --rm -it -v $(pwd):/app -v $HOME/dev/github/queen/data:/data -w /app --gpus all --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 $IMAGE"
+IMAGE="colmapper:latest"
+DOCKER_RUN_BASE="sudo docker run --rm -it -v $(pwd):/app -w /app --gpus all --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 $IMAGE"
 
 # Build image if requested
 if [ "$BUILD_IMAGE" = true ]; then

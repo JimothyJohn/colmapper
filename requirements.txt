@@ -31,3 +31,8 @@ matplotlib
 pytest
 setuptools
 wheel
+appdirs
+tyro
+requests
+rich
+typing_extensions

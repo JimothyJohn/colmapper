@@ -9,7 +9,7 @@ from colmapper.llff.poses.pose_utils import gen_poses
 
 
 # https://github.com/hustvl/4DGaussians/blob/master/scripts/llff2colmap.py
-def llff2colmap(workdir: str) -> None:
+def llff2colmap(workdir: str, downsample: int = 1) -> None:
     colmap_dir = os.path.join(workdir, "sparse_")
 
     poses_arr = np.load(os.path.join(workdir, "poses_bounds.npy"))
@@ -17,7 +17,7 @@ def llff2colmap(workdir: str) -> None:
     near_fars = poses_arr[:, -2:]
 
     H, W, focal = poses[0, :, -1]
-    # focal = focal / 2
+    focal = focal / downsample
     focal = [focal, focal]
     poses = np.concatenate([poses[..., 1:2], -poses[..., :1], poses[..., 2:4]], -1)
 
@@ -269,7 +269,7 @@ def run_colmap_script(workdir: str, datatype: str = "llff"):
     mapper(workdir)
     gen_poses(workdir, "exhaustive")
     if datatype == "llff":
-        llff2colmap(workdir)
+        llff2colmap(workdir, downsample=4)
     else:
         raise ValueError(f"Invalid datatype: {datatype}")
     camTodatabase(workdir)
@@ -277,4 +277,3 @@ def run_colmap_script(workdir: str, datatype: str = "llff"):
     image_undistorter(workdir)
     patch_match_stereo(workdir)
     stereo_fusion(workdir)
-

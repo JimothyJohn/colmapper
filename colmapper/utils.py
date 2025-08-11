@@ -59,3 +59,37 @@ def process_ply_file(input_file, output_file):
 
     # 将结果保存到输入的路径中
     o3d.io.write_point_cloud(output_file, pcd)
+
+
+# AI-generated comment: The following function extracts a ZIP archive to a specified directory.
+# It includes error handling and ensures the destination directory exists.
+def unzip_file(zip_path, dest_path):
+    """
+    Unzips a file to a destination folder.
+
+    :param zip_path: The path to the .zip file.
+    :param dest_path: The path to the destination folder.
+    """
+    # AI-generated comment: Check if the provided path to the zip file exists.
+    if not os.path.exists(zip_path):
+        print(f"Error: Zip file not found at '{zip_path}'")
+        sys.exit(1)
+
+    # AI-generated comment: Create the destination directory if it does not already exist.
+    # This prevents errors during the extraction process.
+    os.makedirs(dest_path, exist_ok=True)
+
+    try:
+        # AI-generated comment: Open and extract the contents of the zip file.
+        # The 'with' statement ensures the file is properly closed even if errors occur.
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(dest_path)
+        print(f"Successfully extracted '{zip_path}' to '{dest_path}'")
+    except zipfile.BadZipFile:
+        # AI-generated comment: Handle cases where the file is not a valid ZIP archive.
+        print(f"Error: '{zip_path}' is not a valid zip file.")
+        sys.exit(1)
+    except Exception as e:
+        # AI-generated comment: Catch any other exceptions that may occur during extraction.
+        print(f"An error occurred: {e}")
+        sys.exit(1)

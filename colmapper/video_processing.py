@@ -31,15 +31,42 @@ def get_video_frame_count(video_path):
         return 0
 
 
+def get_video_resolution(video_path):
+    """
+    Get the resolution (widthxheight) of a video file using ffprobe.
+    """
+    # AI-generated comment: This function executes ffprobe to retrieve the width and height of a video stream.
+    # It is designed to handle potential errors gracefully if ffprobe fails or returns unexpected output.
+    try:
+        cmd = [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=width,height",
+            "-of",
+            "csv=s=x:p=0",
+            video_path,
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        width, height = map(int, result.stdout.strip().split("x"))
+        return width, height
+    except (subprocess.CalledProcessError, ValueError) as e:
+        tqdm.write(f"Warning: Could not get resolution for {video_path}: {str(e)}")
+        return None, None
+
+
 def process_single_video(video_info, progress_bar):
     """
     Process a single video file. This function is designed to be called by ThreadPoolExecutor.
 
     Args:
-        video_info: Tuple containing (video_path, data_dir, camera_dir_name)
+        video_info: Tuple containing (video_path, data_dir, camera_dir_name, downsample_factor)
         progress_bar: tqdm progress bar to update
     """
-    video_path, data_dir, camera_dir_name = video_info
+    video_path, data_dir, camera_dir_name, downsample_factor = video_info
     video_filename = os.path.basename(video_path)
 
     # AI-generated comment: Use the provided sequential camera name (e.g., 'cam01')
@@ -49,6 +76,9 @@ def process_single_video(video_info, progress_bar):
 
     # Get total frames for this video
     total_frames = get_video_frame_count(video_path)
+
+    # AI-generated comment: Get original video resolution to calculate downscaled resolution.
+    original_width, original_height = get_video_resolution(video_path)
 
     # AI-generated comment: Check if frames already exist. If so, skip processing to avoid re-extraction.
     # This check is based on the presence of .png files in the target directory.
@@ -69,16 +99,13 @@ def process_single_video(video_info, progress_bar):
             f"Warning: Could not determine frame count for {video_filename}, progress may be inaccurate"
         )
 
-    # AI-generated comment: Scale the video frames to match the required resolution (1352x1014)
-    # This is half the original Dynerf resolution (2704x2028)
+    # AI-generated comment: Base FFmpeg command for frame extraction.
     ffmpeg_command = [
         "ffmpeg",
         "-i",
         video_path,
         "-loglevel",
         "error",
-        # "-vf",
-        # "scale=1352:1014",  # Scale to exactly half the original resolution
         "-qscale:v",
         "2",
         "-start_number",
@@ -87,6 +114,18 @@ def process_single_video(video_info, progress_bar):
         "0",  # Let ffmpeg use all available threads for this video
         os.path.join(output_frames_dir, "%04d.png"),
     ]
+
+    # AI-generated comment: If resolution was found, downscale the video to half its original resolution.
+    if original_width and original_height:
+        # AI-generated comment: Calculate new resolution (half of original) and insert scaling parameters into the ffmpeg command.
+        new_width = original_width // downsample_factor
+        new_height = original_height // downsample_factor
+        ffmpeg_command.insert(5, f"scale={new_width}:{new_height}")
+        ffmpeg_command.insert(5, "-vf")
+    else:
+        tqdm.write(
+            f"Warning: Could not get resolution for {video_filename}. Processing at original resolution."
+        )
 
     try:
         # Start ffmpeg process
@@ -165,12 +204,12 @@ def extract_first_frames(data_dir):
         shutil.move(video, os.path.join(videos_dir, os.path.basename(video)))
 
 
-def extract_frames(data_dir):
+def extract_frames(data_dir, downsample_factor=1):
     """
     Finds all common video files and processes them in parallel using multiple threads.
     For each video, creates a sequentially named subdirectory 'cam_XX'
     and extracts frames into an 'images' subfolder within it.
-
+    The 'downsample_factor` controls the resolution reduction; e.g., a factor of 2 halves the resolution.
     """
     # Define common video file extensions to search for
     video_extensions = ["*.mp4", "*.mov", "*.avi", "*.mkv", "*.webm", "*.wmv"]
@@ -201,7 +240,7 @@ def extract_frames(data_dir):
     # Each video is assigned a sequential camera name (e.g., 'cam01', 'cam02')
     # based on its sorted filename, which will be used for the output directory.
     video_infos = [
-        (video_path, data_dir, f"cam{i+1:02d}")
+        (video_path, data_dir, f"cam{i+1:02d}", downsample_factor)
         for i, video_path in enumerate(found_video_files)
     ]
 

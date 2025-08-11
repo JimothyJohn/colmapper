@@ -1,34 +1,42 @@
-# Deploy Colmap
+![docs/me.png](docs/me.png)
+# 4D-Utilities
 
-[![Replicate](https://replicate.com/jimothyjohn/colmap/badge)](https://replicate.com/jimothyjohn/colmap)
+The goal of this repository is twofold:
 
-Are you as sick and tired as I am of trying to extract camera poses for your NeRF's? Well if so I've got a treat for you: A fully deployed, GPU-accelerated Colmap endpoint that can turn your video into a fully-configured Colmap workspace!
+1. Neatly organize multiple, static view video files of a single, dynamic scene into standard dataset structures (DyNeRF, Google Immersive, etc) to allow for easier research and development into novel training approaches of dynamic volumetric scenes.
 
-## Quickstart
+2. Create an end-to-end training and rendering pipeline for novel view creation on cloud GPU's
 
-Installs Docker and Cog, pulls image from Replicate, and runs on a [sample video](https://whatagan.s3.amazonaws.com/LionStatue.MOV) from my trip to the Louvre.
+## Features
 
-```bash
-utils/Quickstart.sh
-```
+[x] [Portable development environment](Dockerfile.cuda)
 
-## Requirements
+[x] [Multi-threaded frame extraction utility for DyNeRF](replicate/video_processing.py)
 
-* CUDA>=11.6.2
-* [Docker](https://www.docker.com)
-* [Cog](https://github.com/replicate/cog#install)
+[x] [Colmap pipeline for DyNeRF](replicate/colmap.py)
 
-## To-do
+[x] [CLI](replicate/cli.py)
 
-- [x] Create Replicate endpoint
-- [x] Plug-and-play with nerfstudio
-- [ ] Build tests
-- [ ] Decrease run time (currently ~30 minutes). COLMAP options, downsample earlier?
-- [ ] Optimize .zip file size (currently ~1GB). Remove extra images?
-- [ ] Add Image and Insta360 input options
+[x] [poses_bounds.npy utility for custom dataset](https://github.com/fyusion/llff?tab=readme-ov-file#using-your-own-poses-without-running-colmap)
 
-### Acknowledgements
+[ ] Cloud deployment for spiral render
 
-- [COLMAP](https://github.com/colmap/colmap) for their amazing toolset that is used in EVERY NeRF deployment.
-- [nerfstudio](https://github.com/nerfstudio-project/nerfstudio/blob/main/scripts) for their Python scripts.
-- [svox2](https://github.com/sxyu/svox2/opt) for their neural network-free radiance field utilities.
+[ ] [Novel view trajectory template](https://github.com/fyusion/llff?tab=readme-ov-file#generate-poses-for-new-view-path)
+
+### TODO
+
+[ ] Extend frame extraction to include Google Immersive and others
+
+## Resources
+
+- [DyNeRF datasets](https://github.com/facebookresearch/Neural_3D_Video/releases/tag/v1.0)
+
+- [Pretrained models](https://github.com/NVlabs/queen/releases/tag/v1.0-neurips24)
+
+### Acknowledgement
+
+- Training and rendering scripts from NVlabs' [QUEEN](https://github.com/NVlabs/queen)
+
+- poses_bounds.npy script from [LLFF](https://github.com/Fyusion/LLFF)
+
+- Colmap workflows from [4D Gaussians](https://github.com/hustvl/4DGaussians/blob/master/colmap.sh)
